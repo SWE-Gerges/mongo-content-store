@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Content.Bench</RootNamespace>
+    <AssemblyName>Content.Bench</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Content.Mongo\Content.Mongo.csproj" />
+    <ProjectReference Include="..\..\src\Content.Store\Content.Store.csproj" />
+  </ItemGroup>
+</Project>

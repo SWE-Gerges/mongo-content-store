@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore -warnaserror
+
+      # Every test runs in process over in-memory fakes, so nothing but the SDK is needed.
+      - name: Test
+        run: dotnet test --no-build
+
+      # The test above already compares the generated document with docs/openapi.json; this regenerates it and fails on any difference.
+      - name: OpenAPI snapshot is current
+        run: |
+          UPDATE_OPENAPI=1 dotnet test --no-build --project tests/Content.Tests --filter "FullyQualifiedName~OpenApiSnapshotTests"
+          git diff --exit-code -- docs/openapi.json

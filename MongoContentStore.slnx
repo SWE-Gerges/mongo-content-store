@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/bench/">
+    <Project Path="bench/Content.Bench/Content.Bench.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Content.Api/Content.Api.csproj" />
+    <Project Path="src/Content.Migration/Content.Migration.csproj" />
+    <Project Path="src/Content.Mongo/Content.Mongo.csproj" />
+    <Project Path="src/Content.Reads/Content.Reads.csproj" />
+    <Project Path="src/Content.Store/Content.Store.csproj" />
+    <Project Path="src/Content.Sync/Content.Sync.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Content.TestSupport/Content.TestSupport.csproj" />
+    <Project Path="tests/Content.Tests/Content.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Content.Seed/Content.Seed.csproj" />
+  </Folder>
+</Solution>

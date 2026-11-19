@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Content.Mongo\Content.Mongo.csproj" />
+    <ProjectReference Include="..\..\src\Content.Store\Content.Store.csproj" />
+    <ProjectReference Include="..\..\src\Content.Sync\Content.Sync.csproj" />
+    <ProjectReference Include="..\..\src\Content.Reads\Content.Reads.csproj" />
+    <ProjectReference Include="..\..\src\Content.Migration\Content.Migration.csproj" />
+    <ProjectReference Include="..\..\src\Content.Api\Content.Api.csproj" />
+    <ProjectReference Include="..\Content.TestSupport\Content.TestSupport.csproj" />
+  </ItemGroup>
+</Project>

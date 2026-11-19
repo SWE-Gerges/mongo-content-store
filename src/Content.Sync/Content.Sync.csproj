@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Content.Sync</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenSearch.Client" />
+    <PackageReference Include="Polly.Core" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Content.Mongo\Content.Mongo.csproj" />
+    <ProjectReference Include="..\Content.Store\Content.Store.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Content.Tests" />
+  </ItemGroup>
+</Project>

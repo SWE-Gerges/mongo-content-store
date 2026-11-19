@@ -1,0 +1,71 @@
+# Content queries. They need an API started against your own MongoDB and OpenSearch, with data written by
+# tools/Content.Seed (for example 5000 hotels each for supplier-a, supplier-b and supplier-c, ids 1-5000, plus a merged master).
+# Use the REST Client extension for VS Code, or the HTTP client built into Rider.
+# The expected status code is written above each request.
+
+@host = http://localhost:5103
+@readerKey = demo-reader-key-0000
+@adminKey = demo-admin-key-0000
+
+### Hotels by numeric id (200). Unknown ids are simply absent. The index answers first and MongoDB completes what it lacks; the X-Content-Source response header says index, mongo or mixed.
+GET {{host}}/api/v1/content/supplier-a/hotels?ids=1,2,3,999999
+X-Api-Key: {{readerKey}}
+X-Correlation-Id: demo-ids-1
+
+### One page of hotel ids for a city (200). Pass the returned nextCursor as ?cursor= for the next page.
+GET {{host}}/api/v1/content/supplier-a/hotels?cityCode=C001&pageSize=5
+X-Api-Key: {{readerKey}}
+
+### Second page: replace the cursor with the nextCursor value returned above (200, or 400 if the cursor is garbage).
+GET {{host}}/api/v1/content/supplier-a/hotels?cityCode=C001&pageSize=5&cursor=aDEuMTI
+X-Api-Key: {{readerKey}}
+
+### Hotel by the supplier's alphanumeric code (200), index first like the lookup by id. The code is the supplier letter, H and the id.
+GET {{host}}/api/v1/content/supplier-a/hotels/by-code/AH000001
+X-Api-Key: {{readerKey}}
+
+### Same lookup for a code that does not exist (404, problem+json).
+GET {{host}}/api/v1/content/supplier-a/hotels/by-code/NOPE
+X-Api-Key: {{readerKey}}
+
+### Name search, anchored: case-sensitive prefix that can use an index (200).
+GET {{host}}/api/v1/content/hotels/search?name=Grand&mode=anchored&limit=5
+X-Api-Key: {{readerKey}}
+
+### Name search, contains: case-insensitive substring; scans the collection, so use it as a fallback (200).
+GET {{host}}/api/v1/content/hotels/search?name=palace&mode=contains&limit=5
+X-Api-Key: {{readerKey}}
+
+### Name search, ci: case-insensitive whole-name match served by the collation index (200).
+GET {{host}}/api/v1/content/hotels/search?name=grand%20palace&mode=ci&limit=5
+X-Api-Key: {{readerKey}}
+
+### Merged hotels that list a supplier's own hotel id, whether it is stored as text or a number (200).
+GET {{host}}/api/v1/content/hotels/by-provider/supplier-a/1
+X-Api-Key: {{readerKey}}
+
+### Room detail through the supplier-a mapper: occupancy, room type, characteristic codes (200).
+GET {{host}}/api/v1/content/supplier-a/hotels/1/rooms/1/detail
+X-Api-Key: {{readerKey}}
+
+### Room detail through the supplier-b mapper: class, quality, bedding, bathroom (200).
+GET {{host}}/api/v1/content/supplier-b/hotels/1/rooms/R1/detail
+X-Api-Key: {{readerKey}}
+
+### Room detail for a supplier without a mapper (422, problem+json).
+GET {{host}}/api/v1/content/supplier-c/hotels/1/rooms/1/detail
+X-Api-Key: {{readerKey}}
+
+### Unknown supplier (404, problem+json).
+GET {{host}}/api/v1/content/supplier-z/hotels?ids=1
+X-Api-Key: {{readerKey}}
+
+### Neither ids nor cityCode (400, problem+json).
+GET {{host}}/api/v1/content/supplier-a/hotels
+X-Api-Key: {{readerKey}}
+
+### Missing API key (401, problem+json).
+GET {{host}}/api/v1/content/supplier-a/hotels?ids=1
+
+### The generated OpenAPI document (200, no key needed).
+GET {{host}}/openapi/v1.json

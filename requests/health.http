@@ -1,0 +1,10 @@
+# Health endpoints. Neither needs an API key.
+
+@host = http://localhost:5103
+
+### Liveness: the process is up (200). Checks no dependency.
+GET {{host}}/health/live
+
+### Readiness: MongoDB and OpenSearch both answer (200); 503 with the failing check named if one does not.
+GET {{host}}/health/ready
+X-Correlation-Id: demo-health-1

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Content.Api</RootNamespace>
+    <AssemblyName>Content.Api</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Content.Mongo\Content.Mongo.csproj" />
+    <ProjectReference Include="..\Content.Store\Content.Store.csproj" />
+    <ProjectReference Include="..\Content.Sync\Content.Sync.csproj" />
+    <ProjectReference Include="..\Content.Reads\Content.Reads.csproj" />
+    <ProjectReference Include="..\Content.Migration\Content.Migration.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Content.Tests" />
+  </ItemGroup>
+</Project>

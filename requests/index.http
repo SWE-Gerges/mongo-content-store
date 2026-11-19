@@ -1,0 +1,50 @@
+# Versioned search index: rebuild into a new physical index, verify, switch the alias, roll back.
+# All routes need the admin key. They need an API started against your own MongoDB and OpenSearch with data in
+# the supplier-a collection (see tools/Content.Seed). Run the requests top to bottom; the expected status code is written above each.
+
+@host = http://localhost:5103
+@readerKey = demo-reader-key-0000
+@adminKey = demo-admin-key-0000
+@alias = content-hotel_supplier-a
+
+### Versions behind the alias before any rebuild: nothing current, nothing retained (200).
+GET {{host}}/api/v1/index/{{alias}}
+X-Api-Key: {{adminKey}}
+
+### Rebuild: fill a new index {alias}-vN, verify it, then switch the alias with one request (202).
+POST {{host}}/api/v1/index/{{alias}}/rebuild
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "batchSize": 1000 }
+
+### A second rebuild or a sync while it is active (409, problem+json).
+POST {{host}}/api/v1/index/{{alias}}/rebuild
+X-Api-Key: {{adminKey}}
+
+### Follow the rebuild: latestRun.state becomes "completed" (or "failed" with the verification result below) (200).
+GET {{host}}/api/v1/index/{{alias}}
+X-Api-Key: {{adminKey}}
+
+### Rebuild again so a previous version is retained for rollback (202).
+POST {{host}}/api/v1/index/{{alias}}/rebuild
+X-Api-Key: {{adminKey}}
+
+### Roll back to the most recently retired version (200). 409 while a run is active or when nothing is retained.
+POST {{host}}/api/v1/index/{{alias}}/rollback
+X-Api-Key: {{adminKey}}
+
+### Roll back to a named retained version (200, 409 if it is not retained, 400 if the number is not positive).
+POST {{host}}/api/v1/index/{{alias}}/rollback
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "version": 1 }
+
+### An alias this service does not serve (404, problem+json).
+GET {{host}}/api/v1/index/content-nowhere
+X-Api-Key: {{adminKey}}
+
+### A reader key on an admin route (403, problem+json).
+GET {{host}}/api/v1/index/{{alias}}
+X-Api-Key: {{readerKey}}

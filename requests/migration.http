@@ -1,0 +1,50 @@
+# Relational-to-MongoDB migration (an extension beyond the core content and sync story). All routes need the admin key.
+# They need an API started against your own MongoDB with a migration defined under "Migration:Definitions" (the Development
+# settings define "hotels-from-sqlite", reading the SQLite file written by: dotnet run --project tools/Content.Seed -- --relational ./demo-source.db --count 5000).
+# Run the requests top to bottom; the expected status code is written above each.
+
+@host = http://localhost:5103
+@readerKey = demo-reader-key-0000
+@adminKey = demo-admin-key-0000
+
+### Start the migration by name; an optional batchSize overrides the configured one (202). The response carries the run id.
+# @name startMigration
+POST {{host}}/api/v1/migration/runs
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "migration": "hotels-from-sqlite", "batchSize": 500 }
+
+### Starting it again while it is active (409, problem+json).
+POST {{host}}/api/v1/migration/runs
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "migration": "hotels-from-sqlite" }
+
+### Follow the run: state, migrated and invalid counts, last checkpointed key, and once finished the count verification (200).
+GET {{host}}/api/v1/migration/runs/{{startMigration.response.body.runId}}
+X-Api-Key: {{adminKey}}
+
+### Rows that could not be migrated are dead-lettered under migration:{name} (200).
+GET {{host}}/api/v1/sync/deadletters?collection=migration%3Ahotels-from-sqlite&pageSize=20
+X-Api-Key: {{adminKey}}
+
+### Ask the run to stop; its checkpoint stays at the last completed batch (202, or 409 when it already finished).
+POST {{host}}/api/v1/migration/runs/{{startMigration.response.body.runId}}/cancel
+X-Api-Key: {{adminKey}}
+
+### A migration that is not configured (404, problem+json).
+POST {{host}}/api/v1/migration/runs
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "migration": "does-not-exist" }
+
+### A run id that does not exist (404, problem+json).
+GET {{host}}/api/v1/migration/runs/does-not-exist
+X-Api-Key: {{adminKey}}
+
+### A reader key on an admin route (403, problem+json).
+GET {{host}}/api/v1/migration/runs/anything
+X-Api-Key: {{readerKey}}

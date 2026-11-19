@@ -1,0 +1,2327 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Mongo Content Store API",
+    "description": "Hotel static content served from per-supplier MongoDB collections, plus control of the checkpointed Mongo to OpenSearch sync. Send an API key in the X-Api-Key header; the sync routes need an admin key.",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/v1/content/{supplier}/hotels": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Looks hotels up by id, or pages the hotel ids of a city.",
+        "description": "Pass \u0027ids\u0027 (comma separated, numeric) to fetch hotels by id; or pass \u0027cityCode\u0027 with optional \u0027pageSize\u0027 and \u0027cursor\u0027 to page the ids of a city. The two modes are mutually exclusive. Lookups by id are answered by the search index first and completed from MongoDB; the X-Content-Source response header (index, mongo or mixed) says which served the documents. City paging always reads MongoDB.",
+        "operationId": "GetHotels",
+        "parameters": [
+          {
+            "name": "supplier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cityCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotelCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/{supplier}/hotels/by-code/{code}": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Fetches a hotel by the supplier\u0027s alphanumeric code.",
+        "description": "Answered by the search index first and completed from MongoDB; see the X-Content-Source response header.",
+        "operationId": "GetHotelByCode",
+        "parameters": [
+          {
+            "name": "supplier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotelDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/hotels/search": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Searches the merged hotel master by name.",
+        "description": "\u0027anchored\u0027 (default) matches a case-sensitive prefix and can use an index. \u0027contains\u0027 is a case-insensitive substring match that scans the collection, so use it only as a fallback. \u0027ci\u0027 is a case-insensitive whole-name match served by a collation index.",
+        "operationId": "SearchHotels",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countryCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotelSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/hotels/by-provider/{supplier}/{hotelId}": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Finds merged hotels that list a supplier\u0027s hotel id.",
+        "operationId": "FindHotelsByProvider",
+        "parameters": [
+          {
+            "name": "supplier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hotelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/{supplier}/hotels/{id}/rooms/{roomId}/detail": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Returns a room\u0027s supplier-neutral detail, produced by the supplier\u0027s room mapper.",
+        "operationId": "GetRoomDetail",
+        "parameters": [
+          {
+            "name": "supplier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "roomId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/{collection}/runs": {
+      "post": {
+        "tags": [
+          "Sync"
+        ],
+        "summary": "Starts a sync of a collection into its search index, or resumes it from the checkpoint.",
+        "description": "Admin key required. The run executes in the background; at most one run per collection is active at a time.",
+        "operationId": "StartSyncRun",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartSyncRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/{collection}/status": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "summary": "Reports the state, last checkpointed id, counts and last error of a collection\u0027s sync.",
+        "operationId": "GetSyncStatus",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/deadletters": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "summary": "Lists documents that could not be indexed, newest first, with keyset paging.",
+        "description": "Pass the nextCursor of one page as cursor to get the next. The cursor is opaque.",
+        "operationId": "GetDeadLetters",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadLetterPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/{collection}/cancel": {
+      "post": {
+        "tags": [
+          "Sync"
+        ],
+        "summary": "Asks the active run of a collection to stop; its checkpoint stays at the last completed batch.",
+        "operationId": "CancelSyncRun",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/index/{alias}/rebuild": {
+      "post": {
+        "tags": [
+          "Index"
+        ],
+        "summary": "Builds the collection into a new versioned index, verifies it and switches the alias to it.",
+        "description": "Admin key required. The build runs in the background under the run lease of the collection, so it excludes a sync of the same collection. If verification refuses the new index the alias stays where it was and the new index is kept for inspection.",
+        "operationId": "RebuildIndex",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartSyncRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebuildAcceptedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/index/{alias}": {
+      "get": {
+        "tags": [
+          "Index"
+        ],
+        "summary": "Lists the versions behind an alias: which is current, which are retained for rollback, and the last verification.",
+        "operationId": "GetIndex",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexOverviewDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/index/{alias}/rollback": {
+      "post": {
+        "tags": [
+          "Index"
+        ],
+        "summary": "Points the alias back at a retained version.",
+        "description": "Admin key required. Refused with 409 while a sync or rebuild of the collection is active, or when no retained version exists.",
+        "operationId": "RollbackIndex",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RollbackRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migration/runs": {
+      "post": {
+        "tags": [
+          "Migration"
+        ],
+        "summary": "Starts a configured relational-to-MongoDB migration, or resumes it from its checkpoint.",
+        "description": "Admin key required. The migration is named in the request and defined in configuration (source, query, key column, column mapping, target collection). It runs in the background, at most one run per migration is active, and invalid rows are dead-lettered without stopping it. When it finishes the source count is compared with the target count.",
+        "operationId": "StartMigrationRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartMigrationRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationRunDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migration/runs/{id}": {
+      "get": {
+        "tags": [
+          "Migration"
+        ],
+        "summary": "Reports the state, progress, last checkpointed key, error and count verification of a migration run.",
+        "operationId": "GetMigrationRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationRunDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migration/runs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Migration"
+        ],
+        "summary": "Asks an active migration run to stop; its checkpoint stays at the last completed batch.",
+        "operationId": "CancelMigrationRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationRunDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeadLetterDto": {
+        "required": [
+          "collection",
+          "docId",
+          "reason",
+          "firstSeenAt",
+          "attempts",
+          "payloadHash"
+        ],
+        "type": "object",
+        "properties": {
+          "collection": {
+            "type": "string"
+          },
+          "docId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attempts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "payloadHash": {
+            "type": "string"
+          }
+        }
+      },
+      "DeadLetterPageDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeadLetterDto"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "HotelCollectionResponse": {
+        "required": [
+          "items",
+          "ids",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/HotelDto"
+            }
+          },
+          "ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "HotelDto": {
+        "required": [
+          "id",
+          "code",
+          "canonicalId",
+          "name",
+          "names",
+          "cityCode",
+          "countryCode",
+          "rating",
+          "address",
+          "latitude",
+          "longitude",
+          "images",
+          "amenities",
+          "rooms",
+          "providers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canonicalId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "cityCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "latitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amenities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rooms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoomDto"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderDto"
+            }
+          }
+        }
+      },
+      "HotelSearchResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HotelSummaryDto"
+            }
+          }
+        }
+      },
+      "HotelSummaryDto": {
+        "required": [
+          "id",
+          "code",
+          "name",
+          "cityCode",
+          "countryCode",
+          "rating"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cityCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "IndexOverviewDto": {
+        "required": [
+          "alias",
+          "collection",
+          "current",
+          "legacyIndex",
+          "retained",
+          "versions",
+          "lastVerification",
+          "latestRun"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "collection": {
+            "type": "string"
+          },
+          "current": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "legacyIndex": {
+            "type": "boolean"
+          },
+          "retained": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexVersionDto"
+            }
+          },
+          "lastVerification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IndexVerificationDto"
+              }
+            ]
+          },
+          "latestRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IndexRunDto"
+              }
+            ]
+          }
+        }
+      },
+      "IndexRunDto": {
+        "required": [
+          "kind",
+          "state",
+          "runId",
+          "startedAt",
+          "finishedAt",
+          "lastError",
+          "indexed",
+          "deadLettered"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/SyncState"
+          },
+          "runId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "indexed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "deadLettered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "IndexVerificationDto": {
+        "required": [
+          "passed",
+          "verifiedAt",
+          "sourceCount",
+          "indexCount",
+          "deadLetters",
+          "checks"
+        ],
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sourceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "indexCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "deadLetters": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationCheckDto"
+            }
+          }
+        }
+      },
+      "IndexVersionDto": {
+        "required": [
+          "indexName",
+          "version",
+          "state",
+          "existsOnCluster",
+          "isCurrent",
+          "createdAt",
+          "swappedInAt",
+          "retiredAt",
+          "verification"
+        ],
+        "type": "object",
+        "properties": {
+          "indexName": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "state": {
+            "$ref": "#/components/schemas/IndexVersionState"
+          },
+          "existsOnCluster": {
+            "type": "boolean"
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "swappedInAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "retiredAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "verification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IndexVerificationDto"
+              }
+            ]
+          }
+        }
+      },
+      "IndexVersionState": {
+        "enum": [
+          "building",
+          "live",
+          "retired",
+          "failed"
+        ]
+      },
+      "MigrationRunDto": {
+        "required": [
+          "runId",
+          "migration",
+          "state",
+          "requestedAt",
+          "startedAt",
+          "finishedAt",
+          "migrated",
+          "invalid",
+          "batches",
+          "lastKey",
+          "lastError",
+          "resumedFromKey",
+          "verification"
+        ],
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "migration": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RunState"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "migrated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "invalid": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "batches": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "lastKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resumedFromKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MigrationVerificationDto"
+              }
+            ]
+          }
+        }
+      },
+      "MigrationVerificationDto": {
+        "required": [
+          "sourceCount",
+          "targetCount",
+          "deadLettered",
+          "expectedTarget",
+          "matches",
+          "difference"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "targetCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "deadLettered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "expectedTarget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "matches": {
+            "type": "boolean"
+          },
+          "difference": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ProviderDto": {
+        "required": [
+          "supplier",
+          "hotelId"
+        ],
+        "type": "object",
+        "properties": {
+          "supplier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hotelId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ProviderLookupResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HotelDto"
+            }
+          }
+        }
+      },
+      "RebuildAcceptedDto": {
+        "required": [
+          "alias",
+          "collection",
+          "runId"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "collection": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          }
+        }
+      },
+      "RollbackRequest": {
+        "required": [
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RollbackResultDto": {
+        "required": [
+          "alias",
+          "current",
+          "version",
+          "previousIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "current": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "previousIndex": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RoomDetailDto": {
+        "required": [
+          "supplier",
+          "hotelId",
+          "roomId",
+          "name",
+          "groupId",
+          "occupancy",
+          "roomType",
+          "roomClass",
+          "quality",
+          "bedding",
+          "bathroom",
+          "characteristicCodes"
+        ],
+        "type": "object",
+        "properties": {
+          "supplier": {
+            "type": "string"
+          },
+          "hotelId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "roomId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "groupId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occupancy": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "roomType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roomClass": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bedding": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bathroom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "characteristicCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RoomDto": {
+        "required": [
+          "id",
+          "groupId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "groupId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RunState": {
+        "enum": [
+          "queued",
+          "running",
+          "completed",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ]
+      },
+      "StartMigrationRequest": {
+        "required": [
+          "migration",
+          "batchSize"
+        ],
+        "type": "object",
+        "properties": {
+          "migration": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "batchSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "StartSyncRequest": {
+        "required": [
+          "batchSize",
+          "interBatchDelayMs"
+        ],
+        "type": "object",
+        "properties": {
+          "batchSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "interBatchDelayMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SyncState": {
+        "enum": [
+          "idle",
+          "queued",
+          "running",
+          "completed",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ]
+      },
+      "SyncStatusDto": {
+        "required": [
+          "collection",
+          "kind",
+          "state",
+          "runId",
+          "lastId",
+          "indexed",
+          "deadLettered",
+          "deadLettersTotal",
+          "startedAt",
+          "finishedAt",
+          "lastError"
+        ],
+        "type": "object",
+        "properties": {
+          "collection": {
+            "type": "string"
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/SyncState"
+          },
+          "runId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "indexed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "deadLettered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "deadLettersTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VerificationCheckDto": {
+        "required": [
+          "name",
+          "passed",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "description": "API key. Content routes accept any configured key; /api/v1/sync routes require an admin key.",
+        "name": "X-Api-Key",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKey": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Content"
+    },
+    {
+      "name": "Sync"
+    },
+    {
+      "name": "Index"
+    },
+    {
+      "name": "Migration"
+    }
+  ]
+}

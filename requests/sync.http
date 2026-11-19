@@ -1,0 +1,75 @@
+# Sync administration. All routes need the admin key. Run the requests top to bottom: later ones depend on
+# the state the earlier ones create. The expected status code is written above each request.
+
+@host = http://localhost:5103
+@readerKey = demo-reader-key-0000
+@adminKey = demo-admin-key-0000
+
+### Status before any run (200, state "idle").
+GET {{host}}/api/v1/sync/hotel_supplier-a/status
+X-Api-Key: {{adminKey}}
+
+### Start a deliberately slow run (100 documents per batch, 200 ms pause between batches) so it stays active for a while (202).
+POST {{host}}/api/v1/sync/hotel_supplier-a/runs
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "batchSize": 100, "interBatchDelayMs": 200 }
+
+### Starting again while it is active (409, problem+json).
+POST {{host}}/api/v1/sync/hotel_supplier-a/runs
+X-Api-Key: {{adminKey}}
+
+### Status while it runs: state "running", lastId is the last checkpointed id (200).
+GET {{host}}/api/v1/sync/hotel_supplier-a/status
+X-Api-Key: {{adminKey}}
+
+### Cancel the active run; its checkpoint stays at the last completed batch (202).
+POST {{host}}/api/v1/sync/hotel_supplier-a/cancel
+X-Api-Key: {{adminKey}}
+
+### Cancel again when nothing is running (409, problem+json).
+POST {{host}}/api/v1/sync/hotel_supplier-a/cancel
+X-Api-Key: {{adminKey}}
+
+### Status after cancelling: state "cancelled" and the checkpoint id to resume from (200).
+GET {{host}}/api/v1/sync/hotel_supplier-a/status
+X-Api-Key: {{adminKey}}
+
+### Resume with the configured defaults: continues after the checkpoint (202).
+POST {{host}}/api/v1/sync/hotel_supplier-a/runs
+X-Api-Key: {{adminKey}}
+
+### Status once it has finished: state "completed" (200). Repeat this request until it does.
+GET {{host}}/api/v1/sync/hotel_supplier-a/status
+X-Api-Key: {{adminKey}}
+
+### Sync the merged master collection too (202).
+POST {{host}}/api/v1/sync/hotels/runs
+X-Api-Key: {{adminKey}}
+
+### Documents that could not be indexed, newest first (200). Empty unless the index rejected something. Pass nextCursor as ?cursor= for the next page.
+GET {{host}}/api/v1/sync/deadletters?collection=hotel_supplier-a&pageSize=20
+X-Api-Key: {{adminKey}}
+
+### Dead letters with a cursor this API never issued (400, problem+json).
+GET {{host}}/api/v1/sync/deadletters?cursor=not-a-cursor
+X-Api-Key: {{adminKey}}
+
+### A collection that is not configured (404, problem+json).
+GET {{host}}/api/v1/sync/hotel_unknown/status
+X-Api-Key: {{adminKey}}
+
+### Out-of-range batch size (400, problem+json).
+POST {{host}}/api/v1/sync/hotel_supplier-a/runs
+X-Api-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "batchSize": 0 }
+
+### A reader key on an admin route (403, problem+json).
+GET {{host}}/api/v1/sync/hotel_supplier-a/status
+X-Api-Key: {{readerKey}}
+
+### No key at all (401, problem+json).
+GET {{host}}/api/v1/sync/hotel_supplier-a/status

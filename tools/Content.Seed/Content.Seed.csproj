@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Content.Seed</RootNamespace>
+    <AssemblyName>Content.Seed</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Content.Mongo\Content.Mongo.csproj" />
+    <ProjectReference Include="..\..\src\Content.Store\Content.Store.csproj" />
+  </ItemGroup>
+</Project>
